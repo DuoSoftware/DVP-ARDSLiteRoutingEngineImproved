@@ -23,7 +23,7 @@ func (ardsLiteRs ArdsLiteRS) GetResource(Company, Tenant, ResourceCount int, Ses
 	var otherInfo string
 	json.Unmarshal(byt, &otherInfo)
 
-	requestKey := fmt.Sprintf("Request:%d:%d:%s", Company, Tenant, SessionId)
+	requestKey := fmt.Sprintf("Request:%d:%d:%s", Tenant, Company, SessionId)
 
 	if RedisCheckKeyExist(requestKey) {
 		strReqObj := RedisGet(requestKey)
@@ -37,7 +37,7 @@ func (ardsLiteRs ArdsLiteRS) GetResource(Company, Tenant, ResourceCount int, Ses
 
 		pickedResources := make([]string, 0)
 
-		selectedResources := SelectResources(Company, Tenant, tempRequestArray, SelectionAlgo)
+		selectedResources := SelectResources(tempRequestArray, SelectionAlgo)
 		resourceForRequest, _ := GetSelectedResourceForRequest(selectedResources, reqObj.SessionId, pickedResources)
 		result, _ := HandlingResources(Company, Tenant, ResourceCount, reqObj.LbIp, reqObj.LbPort, SessionId, ServerType, RequestType, HandlingAlgo, otherInfo, resourceForRequest)
 		return result

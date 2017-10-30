@@ -312,29 +312,32 @@ func RedisGet(key string) string {
 	strObj, _ := client.Cmd("get", key).Str()
 	fmt.Println(strObj)
 	return strObj
-	/*if redisMode == "instance" {
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
 
-		strObj, _ := client.Cmd("get", key).Str()
-		fmt.Println(strObj)
-		return strObj
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
+}
+
+func RedisMGet(keys []string) []string {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in RedisMGet", r)
+		}
+	}()
+
+	var client *redis.Client
+	var err error
+
+	if redisMode == "sentinel" {
+		client, err = sentinelPool.GetMaster(redisClusterName)
+		errHndlrNew("RedisMGet", "getConnFromSentinel", err)
 		defer sentinelPool.PutMaster(redisClusterName, client)
+	} else {
+		client, err = redisPool.Get()
+		errHndlrNew("RedisMGet", "getConnFromPool", err)
+		defer redisPool.Put(client)
+	}
 
-		strObj, _ := client.Cmd("get", key).Str()
-		fmt.Println(strObj)
-		return strObj
-	}*/
+	strObjs, _ := client.Cmd("mget", keys).List()
+	fmt.Println(strObjs)
+	return strObjs
 
 }
 
@@ -365,32 +368,6 @@ func RedisGet_v1(key string) (strObj string, err error) {
 	strObj, err = client.Cmd("get", key).Str()
 	fmt.Println(strObj)
 	return
-
-	/*if redisMode == "instance" {
-
-		client, err1 := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err1)
-		defer client.Close()
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		strObj, err = client.Cmd("get", key).Str()
-		fmt.Println(strObj)
-		return
-
-	} else {
-		client, err2 := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err2)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		strObj, err = client.Cmd("get", key).Str()
-		fmt.Println(strObj)
-		return
-	}*/
 
 }
 
@@ -427,30 +404,38 @@ func RedisSearchKeys(pattern string) []string {
 
 	fmt.Println("Scan Result:: ", matchingKeys)
 	return matchingKeys
-	/*if redisMode == "instance" {
 
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
+}
 
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
+func RedisSInter(keys []string) []string {
+	fmt.Println("Start RedisSInter")
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in RedisSInter", r)
+		}
+	}()
 
-		strObj, _ := client.Cmd("keys", pattern).List()
-		return strObj
+	matchingKeys := make([]string, 0)
 
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
+	var client *redis.Client
+	var err error
+
+	if redisMode == "sentinel" {
+		client, err = sentinelPool.GetMaster(redisClusterName)
+		errHndlrNew("RedisSInter", "getConnFromSentinel", err)
 		defer sentinelPool.PutMaster(redisClusterName, client)
+	} else {
+		client, err = redisPool.Get()
+		errHndlrNew("RedisSInter", "getConnFromPool", err)
+		defer redisPool.Put(client)
+	}
 
-		strObj, _ := client.Cmd("keys", pattern).List()
-		return strObj
-	}*/
+	fmt.Println("Start RedisSInter:: ", keys)
+	matchingKeys, err = client.Cmd("sinter", keys).List()
+	errHndlrNew("RedisSInter", "sinter", err)
+
+	fmt.Println("Scan Result:: ", matchingKeys)
+	return matchingKeys
 
 }
 
@@ -483,63 +468,7 @@ func RedisSetNx(key, value string, timeout int) bool {
 		return false
 	}
 
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		tmpValue, _ := client.Cmd("set", key, value, "nx", "ex", timeout).Str()
-		if tmpValue == "OK" {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		tmpValue, _ := client.Cmd("set", key, value, "nx", "ex", timeout).Str()
-		if tmpValue == "OK" {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-	}*/
-
 }
-
-/*func RedisSetEx(key, value string, timeSec int) bool {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Recovered in RedisSetEx", r)
-		}
-	}()
-	client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-	errHndlr(err)
-	defer client.Close()
-
-	// select database
-	r := client.Cmd("select", redisDb)
-	errHndlr(r.Err)
-
-	strObj, _ := client.Cmd("setex", key, timeSec, value).Bool()
-	fmt.Println("setex: ", strObj)
-	return strObj
-}*/
 
 func RedisRemoveRLock(key, value string) bool {
 	defer func() {
@@ -570,44 +499,6 @@ func RedisRemoveRLock(key, value string) bool {
 		fmt.Println("GetRLock: ", false)
 		return false
 	}
-
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-		luaScript := "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end"
-		tmpValue, _ := client.Cmd("eval", luaScript, 1, key, value).Int()
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		luaScript := "if redis.call('get',KEYS[1]) == ARGV[1] then return redis.call('del',KEYS[1]) else return 0 end"
-		tmpValue, _ := client.Cmd("eval", luaScript, 1, key, value).Int()
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-	}*/
 
 }
 
@@ -640,45 +531,6 @@ func RedisRemove(key string) bool {
 		fmt.Println("GetRLock: ", false)
 		return false
 	}
-
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		tmpValue, _ := client.Cmd("del", key).Int()
-
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		tmpValue, _ := client.Cmd("del", key).Int()
-
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-	}*/
 
 }
 
@@ -713,47 +565,6 @@ func RedisCheckKeyExist(key string) bool {
 		return false
 	}
 
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		tmpValue, sErr := client.Cmd("exists", key).Int()
-		errHndlr(sErr)
-
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		tmpValue, sErr := client.Cmd("exists", key).Int()
-		errHndlr(sErr)
-
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-	}*/
-
 }
 
 // Redis Hashes Methods
@@ -781,31 +592,6 @@ func RedisHashGetAll(hkey string) map[string]string {
 	strHash, _ := client.Cmd("hgetall", hkey).Map()
 	return strHash
 
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		strHash, _ := client.Cmd("hgetall", hkey).Map()
-		return strHash
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		strHash, _ := client.Cmd("hgetall", hkey).Map()
-		return strHash
-	}*/
-
 }
 
 func RedisHashGetValue(hkey, queueId string) string {
@@ -828,35 +614,8 @@ func RedisHashGetValue(hkey, queueId string) string {
 		defer redisPool.Put(client)
 	}
 
-
-
-	strHash,_:= client.Cmd("hget", hkey, queueId).Str()
+	strHash, _ := client.Cmd("hget", hkey, queueId).Str()
 	return strHash
-
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		strHash := client.Cmd("hget", hkey, queueId).String()
-		return strHash
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		strHash := client.Cmd("hget", hkey, queueId).String()
-		return strHash
-	}*/
 
 }
 
@@ -890,45 +649,6 @@ func RedisHashSetField(hkey, field, value string) bool {
 		return false
 	}
 
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		tmpValue, _ := client.Cmd("hset", hkey, field, value).Int()
-
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		tmpValue, _ := client.Cmd("hset", hkey, field, value).Int()
-
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-	}*/
-
 }
 
 func RedisRemoveHashField(hkey, field string) bool {
@@ -961,45 +681,6 @@ func RedisRemoveHashField(hkey, field string) bool {
 		return false
 	}
 
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		tmpValue, _ := client.Cmd("hdel", hkey, field).Int()
-
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		tmpValue, _ := client.Cmd("hdel", hkey, field).Int()
-
-		if tmpValue == 1 {
-			fmt.Println("GetRLock: ", true)
-			return true
-		} else {
-			fmt.Println("GetRLock: ", false)
-			return false
-		}
-	}*/
-
 }
 
 // Redis List Methods
@@ -1028,52 +709,7 @@ func RedisListLpop(lname string) string {
 	fmt.Println(lpopItem)
 	return lpopItem
 
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		lpopItem, _ := client.Cmd("lpop", lname).Str()
-		fmt.Println(lpopItem)
-		return lpopItem
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		lpopItem, _ := client.Cmd("lpop", lname).Str()
-		fmt.Println(lpopItem)
-		return lpopItem
-	}*/
-
 }
-
-/*func RedisListLpush(lname, value string) bool {
-	defer func() {
-		if r := recover(); r != nil {
-			fmt.Println("Recovered in RedisListLpush", r)
-		}
-	}()
-	client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-	errHndlr(err)
-	defer client.Close()
-
-	// select database
-	r := client.Cmd("select", redisDb)
-	errHndlr(r.Err)
-
-	result, _ := client.Cmd("lpush", lname, value).Bool()
-	return result
-}*/
 
 /*-----------------------------Geo methods--------------------------------------*/
 
@@ -1102,40 +738,6 @@ func RedisGeoRadius(tenant, company int, locationObj ReqLocationData) *redis.Res
 	locationResult := client.Cmd("georadius", "positions", locationObj.Longitude, locationObj.Latitude, locationObj.Radius, locationObj.Metric, "WITHDIST", "ASC")
 	fmt.Println(locationResult)
 	return locationResult
-
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-		// select database
-		r := client.Cmd("select", locationDb)
-		errHndlr(r.Err)
-
-		locationInfoKey := fmt.Sprintf("location:%d:%d", tenant, company)
-		fmt.Println("locationInfoKey: ", locationInfoKey)
-		locationResult := client.Cmd("georadius", "positions", locationObj.Longitude, locationObj.Latitude, locationObj.Radius, locationObj.Metric, "WITHDIST", "ASC")
-		fmt.Println(locationResult)
-		return locationResult
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		r := client.Cmd("select", locationDb)
-		errHndlr(r.Err)
-
-		locationInfoKey := fmt.Sprintf("location:%d:%d", tenant, company)
-		fmt.Println("locationInfoKey: ", locationInfoKey)
-		locationResult := client.Cmd("georadius", "positions", locationObj.Longitude, locationObj.Latitude, locationObj.Radius, locationObj.Metric, "WITHDIST", "ASC")
-		fmt.Println(locationResult)
-		return locationResult
-	}*/
 
 }
 
@@ -1191,89 +793,6 @@ func RoutingEngineDistribution(pubChannelName string) string {
 
 	}
 
-	/*if redisMode == "instance" {
-
-		client, err := redis.DialTimeout("tcp", redisIp, time.Duration(10)*time.Second)
-		errHndlr(err)
-		defer client.Close()
-
-		//authServer
-		client.Cmd("auth", redisPassword)
-		//errHndlr(authE.Err)
-
-		// select database
-		r := client.Cmd("select", redisDb)
-		errHndlr(r.Err)
-
-		activeRoutingKey, _ := client.Cmd("get", "ActiveRoutingEngine").Str()
-
-		if activeRoutingKey == "" {
-			u1 := uuid.NewV4()
-			if RedisSetNx("ActiveRoutingEngineLock", u1.String(), 30) == true {
-				if RedisSetNx("ActiveRoutingEngine", pubChannelName, 60) == true {
-					RedisRemoveRLock("ActiveRoutingEngineLock", u1.String())
-					return pubChannelName
-				} else {
-					RedisRemoveRLock("ActiveRoutingEngineLock", u1.String())
-					return ""
-				}
-			} else {
-				fmt.Println("Aquire ActiveRoutingEngineLock failed")
-				return activeRoutingKey
-			}
-
-		} else {
-
-			if activeRoutingKey == pubChannelName {
-				expire, _ := client.Cmd("expire", "ActiveRoutingEngine", 60).Int()
-				if expire == 1 {
-					fmt.Println("Extend Active Routing Engine Expire Time Success")
-				} else {
-					fmt.Println("Extend Active Routing Engine Expire Time Failed")
-				}
-			}
-
-			return activeRoutingKey
-
-		}
-
-	} else {
-		client, err := sentinelPool.GetMaster(redisClusterName)
-		errHndlr(err)
-		defer sentinelPool.PutMaster(redisClusterName, client)
-
-		activeRoutingKey, _ := client.Cmd("get", "ActiveRoutingEngine").Str()
-
-		if activeRoutingKey == "" {
-			u1 := uuid.NewV4()
-			if RedisSetNx("ActiveRoutingEngineLock", u1.String(), 30) == true {
-				if RedisSetNx("ActiveRoutingEngine", pubChannelName, 60) == true {
-					RedisRemoveRLock("ActiveRoutingEngineLock", u1.String())
-					return pubChannelName
-				} else {
-					RedisRemoveRLock("ActiveRoutingEngineLock", u1.String())
-					return ""
-				}
-			} else {
-				fmt.Println("Aquire ActiveRoutingEngineLock failed")
-				return activeRoutingKey
-			}
-
-		} else {
-
-			if activeRoutingKey == pubChannelName {
-				expire, _ := client.Cmd("expire", "ActiveRoutingEngine", 60).Int()
-				if expire == 1 {
-					fmt.Println("Extend Active Routing Engine Expire Time Success")
-				} else {
-					fmt.Println("Extend Active Routing Engine Expire Time Failed")
-				}
-			}
-
-			return activeRoutingKey
-		}
-
-	}*/
 }
 
 func AppendIfMissing(windowList []string, i string) []string {

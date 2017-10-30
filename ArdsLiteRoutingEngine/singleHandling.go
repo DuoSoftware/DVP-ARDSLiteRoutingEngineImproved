@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 func SingleHandling(ardsLbIp, ardsLbPort, serverType, requestType, sessionId string, selectedResources SelectedResource, reqCompany, reqTenant int) (handlingResult, handlingResource string) {
@@ -16,13 +15,17 @@ func SelectHandlingResource(ardsLbIp, ardsLbPort, serverType, requestType, sessi
 	fmt.Println("Priority:: ", selectedResources.Priority)
 	fmt.Println("Threshold:: ", selectedResources.Threshold)
 	fmt.Println("ResourceIds:: ", resourceIds)
-	for _, key := range resourceIds {
-		fmt.Println(key)
-		strResObj := RedisGet(key)
+
+	resources := RedisMGet(resourceIds)
+
+	for _, strResObj := range resources {
+
 		fmt.Println(strResObj)
 
 		var resObj Resource
 		json.Unmarshal([]byte(strResObj), &resObj)
+
+		resourceKey := fmt.Sprintf("Resource:%d:%d:%d", resObj.Tenant, resObj.Company, resObj.ResourceId)
 
 		fmt.Println("Start GetConcurrencyInfo")
 		conInfo, cErr := GetConcurrencyInfo(resObj.Company, resObj.Tenant, resObj.ResourceId, requestType)
@@ -48,28 +51,28 @@ func SelectHandlingResource(ardsLbIp, ardsLbPort, serverType, requestType, sessi
 						fmt.Println("===========================================Start====================================================")
 						ClearSlotOnMaxRecerved(ardsLbIp, ardsLbPort, serverType, requestType, sessionId, resObj)
 
-						var tagArray = make([]string, 8)
+						var slotSearchTags = make([]string, 8)
 
-						tagArray[0] = fmt.Sprintf("company_%d", resObj.Company)
-						tagArray[1] = fmt.Sprintf("tenant_%d", resObj.Tenant)
-						tagArray[4] = fmt.Sprintf("handlingType_%s", requestType)
-						tagArray[5] = fmt.Sprintf("state_%s", "Available")
-						tagArray[6] = fmt.Sprintf("resourceid_%s", resObj.ResourceId)
-						tagArray[7] = fmt.Sprintf("objtype_%s", "CSlotInfo")
+						slotSearchTags[0] = fmt.Sprintf("Tag:SlotInfo:company_%d", resObj.Company)
+						slotSearchTags[1] = fmt.Sprintf("Tag:SlotInfo:tenant_%d", resObj.Tenant)
+						slotSearchTags[4] = fmt.Sprintf("Tag:SlotInfo:handlingType_%s", requestType)
+						slotSearchTags[5] = fmt.Sprintf("Tag:SlotInfo:state_%s", "Available")
+						slotSearchTags[6] = fmt.Sprintf("Tag:SlotInfo:resourceId_%d", resObj.ResourceId)
+						slotSearchTags[7] = fmt.Sprintf("Tag:SlotInfo:objType_%s", "CSlotInfo")
 
-						tags := fmt.Sprintf("tag:*%s*", strings.Join(tagArray, "*"))
-						fmt.Println(tags)
-						availableSlots := RedisSearchKeys(tags)
 
-						for _, tagKey := range availableSlots {
-							strslotKey := RedisGet(tagKey)
-							fmt.Println(strslotKey)
+						fmt.Println("slotSearchTags: ", slotSearchTags)
+						availableSlotKeys := RedisSInter(slotSearchTags)
+						fmt.Println("availableSlotKeys: ", availableSlotKeys)
 
-							strslotObj := RedisGet(strslotKey)
-							fmt.Println(strslotObj)
+						availableSlots := RedisMGet(availableSlotKeys)
+
+						for _, strSlotObj := range availableSlots {
+
+							fmt.Println(strSlotObj)
 
 							var slotObj CSlotInfo
-							json.Unmarshal([]byte(strslotObj), &slotObj)
+							json.Unmarshal([]byte(strSlotObj), &slotObj)
 
 							slotObj.State = "Reserved"
 							slotObj.SessionId = sessionId
@@ -82,7 +85,7 @@ func SelectHandlingResource(ardsLbIp, ardsLbPort, serverType, requestType, sessi
 							if ReserveSlot(ardsLbIp, ardsLbPort, slotObj) == true {
 								fmt.Println("Return resource Data:", resObj.OtherInfo)
 								handlingResult = conInfo.RefInfo
-								handlingResource = key
+								handlingResource = resourceKey
 								return
 							}
 						}

@@ -115,7 +115,8 @@ type Resource struct {
 	Class                 string
 	Type                  string
 	Category              string
-	ResourceId            string
+	ResourceId            int
+	ResourceName          string
 	ResourceAttributeInfo []ResAttributeData
 	OtherInfo             string
 }

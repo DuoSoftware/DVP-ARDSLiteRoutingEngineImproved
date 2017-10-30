@@ -42,32 +42,10 @@ func IsAttributeAvailable(reqAttributeInfo []ReqAttributeData, resAttributeInfo 
 	fmt.Println("Check Attribute Availability Return:: isAttrAvailable: ", isAttrAvailable, " isThreshold: ", isThreshold)
 
 	return
-
-	/*for _, reqAtt := range reqAttributeInfo {
-		if len(reqAtt.AttributeCode) > 0 {
-			attCode := reqAtt.AttributeCode[0]
-
-			for _, resAtt := range resAttributeInfo {
-				if attCode == resAtt.Attribute && resAtt.HandlingType == reqAtt.HandlingType {
-					if resAtt.Percentage > 0 {
-						isAttrAvailable = true
-
-						if resAtt.Percentage > 0 && resAtt.Percentage <= 25 {
-							isThreshold = true
-						}
-					} else {
-						isAttrAvailable = false
-					}
-
-					return
-				}
-			}
-		}
-	}*/
 }
 
-func GetConcurrencyInfo(_company, _tenant int, _resId, _category string) (ciObj ConcurrencyInfo, err error) {
-	key := fmt.Sprintf("ConcurrencyInfo:%d:%d:%s:%s", _company, _tenant, _resId, _category)
+func GetConcurrencyInfo(_company, _tenant, _resId int, _category string) (ciObj ConcurrencyInfo, err error) {
+	key := fmt.Sprintf("ConcurrencyInfo:%d:%d:%s:%s", _tenant, _company, _resId, _category)
 	fmt.Println(key)
 	var strCiObj string
 	strCiObj, err = RedisGet_v1(key)
@@ -78,21 +56,21 @@ func GetConcurrencyInfo(_company, _tenant int, _resId, _category string) (ciObj 
 	return
 }
 
-func SelectResources(_company, _tenant int, _requests []Request, _selectionAlgo string) []SelectionResult {
+func SelectResources(_requests []Request, _selectionAlgo string) []SelectionResult {
 	var selectionResult []SelectionResult
 
 	switch _selectionAlgo {
 	case "BASIC":
-		selectionResult = BasicSelection(_company, _tenant, _requests)
+		selectionResult = BasicSelection(_requests)
 		break
 	case "BASICTHRESHOLD":
-		selectionResult = BasicThresholdSelection(_company, _tenant, _requests)
+		selectionResult = BasicThresholdSelection(_requests)
 		break
 	case "WEIGHTBASE":
-		selectionResult = WeightBaseSelection(_company, _tenant, _requests)
+		selectionResult = WeightBaseSelection(_requests)
 		break
 	case "LOCATIONBASE":
-		selectionResult = LocationBaseSelection(_company, _tenant, _requests)
+		selectionResult = LocationBaseSelection(_requests)
 		break
 	default:
 		break

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -33,7 +32,6 @@ func ReserveSlot(ardsLbIp, ardsLbPort string, slotInfo CSlotInfo) bool {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		//panic(err)
 		return false
 	}
 	defer resp.Body.Close()
@@ -57,28 +55,27 @@ func ReserveSlot(ardsLbIp, ardsLbPort string, slotInfo CSlotInfo) bool {
 }
 
 func ClearSlotOnMaxRecerved(ardsLbIp, ardsLbPort, serverType, requestType, sessionId string, resObj Resource) {
-	var tagArray = make([]string, 8)
+	var slotSearchTags = make([]string, 6)
 
-	tagArray[0] = fmt.Sprintf("company_%d", resObj.Company)
-	tagArray[1] = fmt.Sprintf("tenant_%d", resObj.Tenant)
-	tagArray[4] = fmt.Sprintf("handlingType_%s", requestType)
-	tagArray[5] = fmt.Sprintf("state_%s", "Reserved")
-	tagArray[6] = fmt.Sprintf("resourceid_%s", resObj.ResourceId)
-	tagArray[7] = fmt.Sprintf("objtype_%s", "CSlotInfo")
+	slotSearchTags[0] = fmt.Sprintf("Tag:SlotInfo:company_%d", resObj.Company)
+	slotSearchTags[1] = fmt.Sprintf("Tag:SlotInfo:tenant_%d", resObj.Tenant)
+	slotSearchTags[2] = fmt.Sprintf("Tag:SlotInfo:handlingType_%s", requestType)
+	slotSearchTags[3] = fmt.Sprintf("Tag:SlotInfo:state_%s", "Reserved")
+	slotSearchTags[4] = fmt.Sprintf("Tag:SlotInfo:resourceId_%d", resObj.ResourceId)
+	slotSearchTags[5] = fmt.Sprintf("Tag:SlotInfo:objType_%s", "CSlotInfo")
 
-	tags := fmt.Sprintf("tag:*%s*", strings.Join(tagArray, "*"))
-	fmt.Println(tags)
-	reservedSlots := RedisSearchKeys(tags)
+	fmt.Println("slotSearchTags: ", slotSearchTags)
+	reservedSlotKeys := RedisSInter(slotSearchTags)
+	fmt.Println("reservedSlotKeys: ", reservedSlotKeys)
 
-	for _, tagKey := range reservedSlots {
-		strslotKey := RedisGet(tagKey)
-		fmt.Println(strslotKey)
+	reservedSlots := RedisMGet(reservedSlotKeys)
 
-		strslotObj := RedisGet(strslotKey)
-		fmt.Println(strslotObj)
+	for _, slot := range reservedSlots {
+
+		fmt.Println(slot)
 
 		var slotObj CSlotInfo
-		json.Unmarshal([]byte(strslotObj), &slotObj)
+		json.Unmarshal([]byte(slot), &slotObj)
 
 		fmt.Println("Datetime Info" + slotObj.LastReservedTime)
 		t, _ := time.Parse(layout, slotObj.LastReservedTime)
@@ -96,7 +93,7 @@ func ClearSlotOnMaxRecerved(ardsLbIp, ardsLbPort, serverType, requestType, sessi
 }
 
 func GetReqMetaData(_company, _tenent int, _serverType, _requestType string) (metaObj ReqMetaData, err error) {
-	key := fmt.Sprintf("ReqMETA:%d:%d:%s:%s", _company, _tenent, _serverType, _requestType)
+	key := fmt.Sprintf("ReqMETA:%d:%d:%s:%s", _tenent, _company, _serverType, _requestType)
 	fmt.Println(key)
 	var strMetaObj string
 	strMetaObj, err = RedisGet_v1(key)
@@ -107,8 +104,8 @@ func GetReqMetaData(_company, _tenent int, _serverType, _requestType string) (me
 	return
 }
 
-func GetResourceState(_company, _tenant int, _resId string) (state string, mode string, err error) {
-	key := fmt.Sprintf("ResourceState:%d:%d:%s", _company, _tenant, _resId)
+func GetResourceState(_company, _tenant, _resId int) (state string, mode string, err error) {
+	key := fmt.Sprintf("ResourceState:%d:%d:%d", _tenant, _company, _resId)
 	fmt.Println(key)
 	var strResStateObj string
 
