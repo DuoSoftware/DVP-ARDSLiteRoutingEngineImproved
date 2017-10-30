@@ -1,0 +1,19 @@
+{
+    "RedisIp": "SYS_REDIS_HOST",
+	"RedisPort": "SYS_REDIS_PORT",
+	"RedisDb": "SYS_REDIS_DB_ARDS",
+	"LocationDb": "SYS_REDIS_DB_LOCATION",
+	"RedisPassword":"SYS_REDIS_PASSWORD",
+	"Port":"HOST_ARDSLITEROUTINGENGINE_PORT",
+	"RabbitMQIp": "SYS_RABBITMQ_HOST",
+	"RabbitMQPort": "SYS_RABBITMQ_PORT",
+	"RabbitMQUser": "SYS_RABBITMQ_USER",
+	"RabbitMQPassword":"SYS_RABBITMQ_PASSWORD",
+	"UseMsgQueue": "HOST_USE_MSG_QUEUE",
+	"AccessToken":"HOST_TOKEN",
+	"RoutingEngineId": "HOST_ARDSLITEROUTINGENGINE_ID",
+	"RedisMode":"SYS_REDIS_MODE",
+	"RedisClusterName":"SYS_REDIS_SENTINEL_NAME",
+	"SentinelHosts": "SYS_REDIS_SENTINEL_HOSTS",
+	"SentinelPort": "SYS_REDIS_SENTINEL_PORT"
+}
